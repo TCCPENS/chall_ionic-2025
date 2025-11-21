@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  binex-1:
+    build: .
+    ports:
+      - "9999:9999"
+    restart: "no"
+    read_only: true
+    networks:
+      - default
+      - no-internet
+
+networks:
+  default:
+    driver: bridge
+  no-internet:
+    internal: true
