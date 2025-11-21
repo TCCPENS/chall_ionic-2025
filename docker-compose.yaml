@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend/build:/var/www/menfess
+    depends_on:
+      - backend
+      - bot
+
+  backend:
+    build: ./backend
+    environment:
+      - FLASK_ENV=development
+      - FLASK_APP=main.py
+      - SECRET_KEY=9e65f06f7534629f4d0a1a867611ccf5afbd4ad59a68733c64573175acb85496
+      - JWT_SECRET_KEY=402c2b9e33f88ea5893115c4d643b2ca0416b9d67cba742ac15976cf8ecebe28
+      - POSTGRES_USER=menfess
+      - POSTGRES_PASSWORD=ef171f1c6b3988dc0d358a604fc5e2ac75d6f9566414c8cb
+      - POSTGRES_DB=menfess_db
+      - SQLALCHEMY_DATABASE_URI=postgresql://menfess:ef171f1c6b3988dc0d358a604fc5e2ac75d6f9566414c8cb@db:5432/menfess_db
+      - REDIS_URL=redis://redis:6379/0
+      - BOT_SERVICE_URL=http://bot:5000
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+  bot:
+    build: ./bot
+    environment:
+      - SERVICE_HOST=http://nginx
+    volumes:
+      - ./bot:/app
+    ports:
+      - "5001:5000"  
+
+  db:
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=menfess
+      - POSTGRES_PASSWORD=ef171f1c6b3988dc0d358a604fc5e2ac75d6f9566414c8cb
+      - POSTGRES_DB=menfess_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
